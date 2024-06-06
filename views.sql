@@ -1,15 +1,15 @@
-CREATE VIEW VideoAuthors AS
-SELECT v.video_id, v.title, v.description, v.upload_date, u.username
-FROM Videos v
-JOIN Users u ON v.user_id = u.user_id;
-
-CREATE VIEW VideoComments AS
-SELECT c.comment_id, c.video_id, c.content, c.comment_date, u.username
-FROM Comments c
-JOIN Users u ON c.user_id = u.user_id;
-
-CREATE VIEW UserRolesView AS
-SELECT u.user_id, u.username, r.role_name
+CREATE VIEW UserSubscriptions AS
+SELECT u.user_id, u.username, u.email, s.subscription_type, s.price
 FROM Users u
-JOIN UserRoles ur ON u.user_id = ur.user_id
-JOIN Roles r ON ur.role_id = r.role_id;
+JOIN Subscriptions s ON u.subscription_id = s.subscription_id;
+
+CREATE VIEW VideoCategories AS
+SELECT v.video_id, v.title, v.description, c.category_name
+FROM Videos v
+JOIN Categories c ON v.category_id = c.category_id;
+
+CREATE VIEW CommentsView AS
+SELECT c.comment_id, u.username, v.title, c.comment_text, c.comment_date
+FROM Comments c
+JOIN Users u ON c.user_id = u.user_id
+JOIN Videos v ON c.video_id = v.video_id;

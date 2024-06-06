@@ -1,57 +1,53 @@
-CREATE OR REPLACE FUNCTION before_insert_videos()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM Users WHERE user_id = NEW.user_id) THEN
-        RAISE EXCEPTION 'User does not exist';
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+DELIMITER //
 
-CREATE TRIGGER before_insert_videos
-BEFORE INSERT ON Videos
+CREATE TRIGGER before_insert_user
+BEFORE INSERT ON Users
 FOR EACH ROW
-EXECUTE FUNCTION before_insert_videos();
-
-CREATE OR REPLACE FUNCTION after_insert_videos()
-RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO LogTable(action, table_name, user_id, timestamp)
-    VALUES('INSERT', 'Videos', NEW.user_id, NOW());
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+    IF EXISTS (SELECT 1 FROM Users WHERE email = NEW.email) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Email already exists.';
+    END IF;
+END; //
 
-CREATE TRIGGER after_insert_videos
+DELIMITER ;
+
+DELIMITER //
+
+CREATE TRIGGER after_insert_video
 AFTER INSERT ON Videos
 FOR EACH ROW
-EXECUTE FUNCTION after_insert_videos();
-
-CREATE OR REPLACE FUNCTION before_update_comments()
-RETURNS TRIGGER AS $$
 BEGIN
-    IF NEW.content IS NULL OR NEW.content = '' THEN
-        RAISE EXCEPTION 'Comment content cannot be empty';
+    UPDATE Categories SET video_count = video_count + 1 WHERE category_id = NEW.category_id;
+END; //
+
+DELIMITER ;
+
+DELIMITER //
+
+CREATE TRIGGER before_update_subscription
+BEFORE UPDATE ON Subscriptions
+FOR EACH ROW
+BEGIN
+    IF NEW.price < 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Price must be non-negative.';
     END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+END; //
 
-CREATE TRIGGER before_update_comments
-BEFORE UPDATE ON Comments
+DELIMITER ;
+
+DELIMITER //
+
+CREATE TRIGGER after_update_video
+AFTER UPDATE ON Videos
 FOR EACH ROW
-EXECUTE FUNCTION before_update_comments();
-
-CREATE OR REPLACE FUNCTION after_update_comments()
-RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO LogTable(action, table_name, user_id, timestamp)
-    VALUES('UPDATE', 'Comments', NEW.user_id, NOW());
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+    IF OLD.category_id IS NOT NULL THEN
+        UPDATE Categories SET video_count = video_count - 1 WHERE category_id = OLD.category_id;
+    END IF;
 
-CREATE TRIGGER after_update_comments
-AFTER UPDATE ON Comments
-FOR EACH ROW
-EXECUTE FUNCTION after_update_comments();
+    IF NEW.category_id IS NOT NULL THEN
+        UPDATE Categories SET video_count = video_count + 1 WHERE category_id = NEW.category_id;
+    END IF;
+END; //
+
+DELIMITER ;
